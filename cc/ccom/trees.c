@@ -80,6 +80,10 @@
 #undef n_df
 #define n_df pdf
 
+
+
+static void andorbr(P1ND *p, int a, int b);
+
 static void chkpun(P1ND *p);
 static int opact(P1ND *p);
 static int moditype(TWORD);
@@ -2177,7 +2181,7 @@ fixbranch(P1ND *p, int label)
  * Write out logical expressions as branches.
  */
 static void
-andorbr(P1ND *p, int true, int false)
+andorbr(P1ND *p, int a, int b)
 {
 	P1ND *q;
 	int o, lab;
@@ -2220,20 +2224,20 @@ andorbr(P1ND *p, int true, int false)
 	case LT:
 	case GE:
 	case GT:
-calc:		if (true < 0) {
+calc:		if (a< 0) {
 			p->n_op = p1negrel[p->n_op - EQ];
 			p->n_ap = attr_add(p->n_ap,
 			    attr_new(ATTR_FP_SWAPPED, 3));
 			p->n_ap->aa[0].iarg = 1;
-			true = false;
-			false = -1;
+			a = b;
+			b = -1;
 		}
 
 		rmcops(p->n_left);
 		rmcops(p->n_right);
-		fixbranch(p, true);
-		if (false >= 0)
-			branch(false);
+		fixbranch(p, a);
+		if (b >= 0)
+			branch(b);
 		break;
 
 	case ULE:
@@ -2247,9 +2251,9 @@ calc:		if (true < 0) {
 	case ULT:
 		/* Already true/false by definition */
 		if (nncon(p->n_right) && glval(p->n_right) == 0) {
-			if (true < 0) {
+			if (a < 0) {
 				o = o == ULT ? UGE : ULT;
-				true = false;
+				a = b;
 			}
 			rmcops(p->n_left);
 			ecode(p->n_left);
@@ -2257,45 +2261,45 @@ calc:		if (true < 0) {
 			ecode(p->n_right);
 			p1nfree(p);
 			if (o == UGE) /* true */
-				branch(true);
+				branch(a);
 			break;
 		}
 		goto calc;
 
 	case ANDAND:
-		lab = false<0 ? getlab() : false ;
+		lab = b<0 ? getlab() : b ;
 		andorbr(p->n_left, -1, lab);
 		comops(p->n_right);
-		andorbr(p->n_right, true, false);
-		if (false < 0)
+		andorbr(p->n_right,a, b);
+		if (b < 0)
 			plabel( lab);
 		p1nfree(p);
 		break;
 
 	case OROR:
-		lab = true<0 ? getlab() : true;
+		lab = a<0 ? getlab() :a;
 		andorbr(p->n_left, lab, -1);
 		comops(p->n_right);
-		andorbr(p->n_right, true, false);
-		if (true < 0)
+		andorbr(p->n_right, a, b);
+		if (a< 0)
 			plabel( lab);
 		p1nfree(p);
 		break;
 
 	case NOT:
-		andorbr(p->n_left, false, true);
+		andorbr(p->n_left, b,a);
 		p1nfree(p);
 		break;
 
 	default:
 		rmcops(p);
-		if (true >= 0)
-			fixbranch(p, true);
-		if (false >= 0) {
-			if (true >= 0)
-				branch(false);
+		if (a >= 0)
+			fixbranch(p, a);
+		if (b >= 0) {
+			if (a >= 0)
+				branch(b);
 			else
-				fixbranch(buildtree(EQ, p, bcon(0)), false);
+				fixbranch(buildtree(EQ, p, bcon(0)), b);
 		}
 	}
 }
